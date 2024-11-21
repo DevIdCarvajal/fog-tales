@@ -3,7 +3,7 @@ const Header = () => {
     <header>
       <h1>Cuentos entre la niebla en familia</h1>
     </header>
-  );
+  )
 }
 
-export default Header;
+export default Header
