@@ -1,10 +1,12 @@
 // imports
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import './App.css'
 
 import Header from './components/Header/Header'
 import Tale from './components/Tale/Tale'
+
+//import { validateEmail } from './utils/validations'
 
 // logic
 const App = () => {
@@ -14,30 +16,12 @@ const App = () => {
   // let vip = true
 
   const [vip, setVip] = useState(true)
-  const [tales, setTales] = useState([
-    {
-      id: 1,
-      tale: 'Pan y pimiento',
-      image: 'https://d36fw6y2wq3bat.cloudfront.net/recipes/pate-de-pimientos-del-piquillo-y-atun/900/pate-de-pimientos-del-piquillo-y-atun.jpg'
-    },
-    {
-      id: 2,
-      tale: 'Casi es viernes',
-      image: 'https://d36fw6y2wq3bat.cloudfront.net/recipes/pate-de-pimientos-del-piquillo-y-atun/900/pate-de-pimientos-del-piquillo-y-atun.jpg'
-    },
-    {
-      id: 3,
-      tale: 'Sin nombre',
-      image: 'https://d36fw6y2wq3bat.cloudfront.net/recipes/pate-de-pimientos-del-piquillo-y-atun/900/pate-de-pimientos-del-piquillo-y-atun.jpg'
-    },
-    {
-      id: 4,
-      tale: 'Yo qué sé',
-      image: 'https://d36fw6y2wq3bat.cloudfront.net/recipes/pate-de-pimientos-del-piquillo-y-atun/900/pate-de-pimientos-del-piquillo-y-atun.jpg'
-    }
-  ])
+  const [tales, setTales] = useState([])
   const [taleName, setTaleName] = useState('')
   const [taleImage, setTaleImage] = useState('')
+  const [lightTheme, setLightTheme] = useState(true)
+  const [errorMessage, setErrorMessage] = useState(false)
+  const [totalTales, setTotalTales] = useState(0)
 
   const checkVip = () => {
     if (vip) {
@@ -59,7 +43,22 @@ const App = () => {
     setVip(!vip)
   }
 
-  const addTale = () => {
+  const validateTale = () => {
+    // Lógica de validación
+    if (
+      taleName &&
+      taleName.length < 20 &&
+      taleImage
+    ) {
+      addTale(taleName, taleImage)
+      setErrorMessage(false)
+    }
+    else {
+      setErrorMessage(true)
+    }
+  }
+
+  const addTale = (taleName, taleImage) => {
     // Añadir los datos de los inputs al array
     setTales([...tales, {
       id: tales.length + 1,
@@ -68,10 +67,47 @@ const App = () => {
     }])
   }
   
+  // Caso 1: Cuando se carga la primera vez
+  //   Mounting (componentDidMount)
+  useEffect(() => {
+    fetch('https://www.thecocktaildbp.com/api/json/v1/1/filter.php?a=Non_Alcoholic')
+      .then((response) => {
+        if (response.ok) {
+          return response.json()
+        } else {
+          console.log('Respuesta de red OK pero respuesta de HTTP no OK');
+        }
+      })
+      .then((data) => {
+        setTales(data.drinks.slice(0, 5).map((tale) => {
+          return {
+            id: tale.idDrink,
+            tale: tale.strDrink,
+            image: tale.strDrinkThumb
+          }
+        }))
+      })
+      .catch((error) => {
+        console.log('Hubo un problema con la petición Fetch:' + error.message);
+      })
+  }, [])
+
+  // Caso 2: Va a dispararse para cualquier actualización (incluida la primera)
+  //   Updating genérico ("componentDidUpdate")
+  useEffect(() => {
+    // ...
+  })
+
+  // Caso 3: Va a dispararse para cualquier actualización (incluida la primera) solamente para aquellos datos que decidamos
+  //   Updating específico ("componentDidUpdate")
+  useEffect(() => {
+    setTotalTales(tales.length)
+  }, [tales]) // dependencies
+
   // renderization
   return (
-    <div className={ year > 2030 ? 'App future' : 'App past' }>
-      <Header />
+    <div className={`App ${lightTheme ? 'future' : 'past'}`}>
+      <Header light={{lightTheme, setLightTheme}} />
       
       <h2>Hola Mundo en el año { year }</h2>
 
@@ -114,17 +150,29 @@ const App = () => {
           />
         </div>
 
-        <button onClick={addTale}>Añadir</button>
+        { errorMessage && <p>Los datos no están bien</p> }
+
+        <button onClick={validateTale}>Añadir</button>
       </div>
       
       {
-        tales.map((tale, index) =>
-          <Tale
-            key={index}
-            tale={tale.tale}
-            image={tale.image}
-          />
-        )
+        tales.length > 0
+        ?
+        <>
+          {
+            tales.map((tale, index) =>
+              <Tale
+                key={index}
+                tale={tale.tale}
+                image={tale.image}
+              />
+            )
+          }
+          
+          <p>Total: {totalTales}</p>
+        </>
+        :
+        <p>No hay cuentos</p>
       }
       
       {/*
